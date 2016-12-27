@@ -1,0 +1,123 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+1. LOADING AND PROCESSING THE DATA
+
+data <- read.table('activity.csv',sep = ",",header = TRUE, na.strings ="NA",
+                   colClasses = c('integer','Date','factor'))
+                   
+2. REMOVING THE ROWS WITH NA
+                   
+new.data <- na.omit(data)
+
+3. HISTOGRAM OF THE TOTAL NUMBER OF STEPS TAKEN PER DAY
+
+total.steps <- tapply(new.data$steps, new.data$date, FUN = sum)
+plot1 <- ggplot(new.data, aes(date, steps)) + geom_histogram(stat = "identity",binwidth = .5) +
+        labs(title = "Histogram of Total Number of Steps Taken Each Day",x = "Date", y = "Total Number of Steps")
+print(plot1)
+
+4. MEAN TOTAL NUMBER OF STEPS PER DAY
+
+mean(total.steps)
+
+5. MEDIAN TOTAL NUMBER OF STEPS PER DAY
+
+median(total.steps)
+
+6. AVERAGE DAILY ACTIVITY PATTERN
+
+averages <- aggregate(new.data$steps, list(interval = as.numeric(as.character(new.data$interval))), FUN = "mean")
+names(averages)[2] <- "Avg.Steps"
+
+plot2 <- ggplot(averages, aes(interval, Avg.Steps)) + geom_line(color = "green", size = 0.7) + labs(title = "Time Series Plot of the 5-minute Intervals", x = "5-minute intervals", y = "Average Number of Steps Taken")
+print(plot2)
+
+
+7.Which 5-minute interval, on average across all days, contains the most steps?
+
+averages[averages$Avg.Steps == max(averages$Avg.Steps),]
+
+8. TOTAL NUMBER OF INCOMPLETE CASES
+
+sum(!complete.cases(data))
+
+9. Imputing missing values by using mean for that 5-minute interval
+
+impData <- data 
+for (i in 1:nrow(impData)) {
+    if (is.na(impData$steps[i])) {
+        impData$steps[i] <- averages[which(impData$interval[i] == averages$interval), ]$Avg.Steps
+    }
+}
+
+sum(!complete.cases(impData))
+
+10. HISTOGRAM OF TOTAL NUMBER OF STEPS TAKEN EACH DAY
+
+plot3 <- ggplot(impData, aes(date, steps)) + geom_histogram(stat = "identity",binwidth = .5) +
+        labs(title = "Histogram of Total Number of Steps Taken Each Day (Imputed Data)",x = "Date", y = "Total Number of Steps")
+print(plot3)
+
+11. MEAN OF TOTAL NUMBER OF STEPS
+
+total.steps.impute <- tapply(impData$steps, impData$date, FUN = sum)
+mean(total.steps.impute)
+
+12. MEDIAN OF TOTAL NUMBER OF STEPS
+
+median(total.steps.impute)
+
+13. CREATING FACTOR VARIABLES WHETHER THE DATE IS A WEEKDAY OR WEEKEND
+
+impData$weekdays <- factor(format(impData$date, "%A"))
+levels(impData$weekdays)
+
+levels(impData$weekdays) <- list(weekday = c("Monday", "Tuesday",
+                                             "Wednesday", 
+                                             "Thursday", "Friday"),
+                                 weekend = c("Saturday", "Sunday"))
+levels(impData$weekdays)
+
+
+table(impData$weekdays)
+
+14. Graphing panel plot containing time series plot of each 5-minute interval and the average number of steps taken, averaged across all days, split into weekdays and weekends.
+
+new.averages <- aggregate(impData$steps, 
+                      list(interval = as.numeric(as.character(impData$interval)), 
+                           weekdays = impData$weekdays),
+                      FUN = "mean")
+names(new.averages)[3] <- "meanOfSteps"
+library(lattice)
+plot4 <- xyplot(new.averages$meanOfSteps ~ new.averages$interval | new.averages$weekdays, 
+       layout = c(1, 2), type = "l", 
+       xlab = "Interval", ylab = "Number of steps")
+print(plot4)
